@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Minha Primeira Calculadora</title>
+
+  <!-- ========== PARTE 1: CSS (a "roupa" da página) ========== -->
+  <style>
+    body {
+      background: #1e1e2f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    .calculadora {
+      background: #2b2b40;
+      padding: 20px;
+      border-radius: 20px;
+      width: 280px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #visor {
+      background: #11111b;
+      color: #00ffcc;
+      font-size: 32px;
+      text-align: right;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      min-height: 40px;
+      overflow-x: auto;
+    }
+
+    .botoes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      padding: 20px;
+      font-size: 20px;
+      border: none;
+      border-radius: 10px;
+      background: #3d3d5c;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover  { background: #50507a; }
+    button:active { transform: scale(0.95); }
+
+    .operador { background: #ff9500; }
+    .igual    { background: #00c27a; grid-column: span 2; }
+    .limpar   { background: #ff3b30; }
+
+    /* NOVO: estilo do histórico */
+    .historico {
+      margin-top: 20px;
+      background: #11111b;
+      border-radius: 10px;
+      padding: 10px 15px;
+      color: #b0b0d0;
+    }
+
+    .historico-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .historico-topo button {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: #3d3d5c;
+    }
+
+    #lista-historico {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+    }
+
+    #lista-historico li {
+      padding: 6px 0;
+      border-bottom: 1px solid #2b2b40;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== PARTE 2: HTML (o "esqueleto" da página) ========== -->
+  <div class="calculadora">
+    <div id="visor">0</div>
+
+    <div class="botoes">
+      <button class="limpar" onclick="limpar()">C</button>
+      <button onclick="apagar()">⌫</button>
+      <button class="operador" onclick="escolherOperacao('÷')">÷</button>
+      <button class="operador" onclick="escolherOperacao('×')">×</button>
+
+      <button onclick="adicionarNumero('7')">7</button>
+      <button onclick="adicionarNumero('8')">8</button>
+      <button onclick="adicionarNumero('9')">9</button>
+      <button class="operador" onclick="escolherOperacao('-')">−</button>
+
+      <button onclick="adicionarNumero('4')">4</button>
+      <button onclick="adicionarNumero('5')">5</button>
+      <button onclick="adicionarNumero('6')">6</button>
+      <button class="operador" onclick="escolherOperacao('+')">+</button>
+
+      <button onclick="adicionarNumero('1')">1</button>
+      <button onclick="adicionarNumero('2')">2</button>
+      <button onclick="adicionarNumero('3')">3</button>
+      <button onclick="adicionarNumero('0')">0</button>
+
+      <button onclick="adicionarNumero('.')">.</button>
+      <!-- NOVO: o botão "00" foi trocado pelo botão de percentagem -->
+      <button class="operador" onclick="percentagem()">%</button>
+      <button class="igual" onclick="calcular()">=</button>
+    </div>
+
+    <!-- NOVO: caixa do histórico -->
+    <div class="historico">
+      <div class="historico-topo">
+        <strong>Histórico</strong>
+        <button onclick="limparHistorico()">Limpar</button>
+      </div>
+      <ul id="lista-historico"></ul>
+    </div>
+  </div>
+
+  <!-- ========== PARTE 3: JavaScript (o "cérebro" da página) ========== -->
+  <script>
+    let numeroAtual = '';
+    let numeroAnterior = '';
+    let operacao = null;
+    let historico = [];   // NOVO: lista onde guardamos as contas feitas
+
+    const visor = document.getElementById('visor');
+    const listaHistorico = document.getElementById('lista-historico');
+
+    function adicionarNumero(numero) {
+      if (numero === '.' && numeroAtual.includes('.')) return;
+      numeroAtual = numeroAtual + numero;
+      actualizarVisor();
+    }
+
+    function escolherOperacao(op) {
+      if (numeroAtual === '') return;
+      if (numeroAnterior !== '') calcular();
+      operacao = op;
+      numeroAnterior = numeroAtual;
+      numeroAtual = '';
+      actualizarVisor();
+    }
+
+    function calcular() {
+      const a = parseFloat(numeroAnterior);
+      const b = parseFloat(numeroAtual);
+      if (isNaN(a) || isNaN(b)) return;
+
+      let resultado;
+      switch (operacao) {
+        case '+': resultado = a + b; break;
+        case '-': resultado = a - b; break;
+        case '×': resultado = a * b; break;
+        case '÷':
+          if (b === 0) {
+            alert('Dividir por zero? Nem o professor de Matemática consegue!');
+            limpar();
+            return;
+          }
+          resultado = a / b;
+          break;
+        default: return;
+      }
+
+      resultado = Math.round(resultado * 1e10) / 1e10;
+
+      // NOVO: guarda a conta no histórico antes de limpar as variáveis
+      adicionarAoHistorico(a + ' ' + operacao + ' ' + b + ' = ' + resultado);
+
+      numeroAtual = String(resultado);
+      operacao = null;
+      numeroAnterior = '';
+      actualizarVisor();
+    }
+
+    // ===== NOVO 1: PERCENTAGEM =====
+    // Sozinho: 50 % → 0.5
+    // Numa conta de + ou −: 200 + 10 % → 200 + 20 (10% de 200)
+    function percentagem() {
+      if (numeroAtual === '') return;
+      let numero = parseFloat(numeroAtual);
+
+      if (numeroAnterior !== '' && (operacao === '+' || operacao === '-')) {
+        numero = parseFloat(numeroAnterior) * numero / 100;
+      } else {
+        numero = numero / 100;
+      }
+
+      numeroAtual = String(numero);
+      actualizarVisor();
+    }
+
+    // ===== NOVO 2: TECLADO =====
+    // "keydown" é um EVENTO: acontece sempre que alguém carrega numa tecla
+    document.addEventListener('keydown', function (evento) {
+      const tecla = evento.key;  // qual tecla foi carregada
+
+      if ('0123456789'.includes(tecla)) {
+        adicionarNumero(tecla);
+      } else if (tecla === '.' || tecla === ',') {
+        adicionarNumero('.');
+      } else if (tecla === '+') {
+        escolherOperacao('+');
+      } else if (tecla === '-') {
+        escolherOperacao('-');
+      } else if (tecla === '*') {
+        escolherOperacao('×');
+      } else if (tecla === '/') {
+        evento.preventDefault();  // impede o navegador de abrir a pesquisa rápida
+        escolherOperacao('÷');
+      } else if (tecla === '%') {
+        percentagem();
+      } else if (tecla === 'Enter' || tecla === '=') {
+        evento.preventDefault();  // impede o Enter de "clicar" no último botão
+        calcular();
+      } else if (tecla === 'Backspace') {
+        apagar();
+      } else if (tecla === 'Escape') {
+        limpar();
+      }
+    });
+
+    // ===== NOVO 3: HISTÓRICO =====
+    function adicionarAoHistorico(conta) {
+      historico.unshift(conta);          // põe a conta nova no INÍCIO da lista
+      if (historico.length > 5) {
+        historico.pop();                 // se passar de 5, tira a mais antiga
+      }
+      mostrarHistorico();
+    }
+
+    function mostrarHistorico() {
+      listaHistorico.innerHTML = '';     // apaga o que estava no ecrã
+      for (const conta of historico) {   // percorre cada conta guardada
+        const item = document.createElement('li');
+        item.textContent = conta;
+        listaHistorico.appendChild(item);
+      }
+    }
+
+    function limparHistorico() {
+      historico = [];
+      mostrarHistorico();
+    }
+
+    function limpar() {
+      numeroAtual = '';
+      numeroAnterior = '';
+      operacao = null;
+      actualizarVisor();
+    }
+
+    function apagar() {
+      numeroAtual = numeroAtual.slice(0, -1);
+      actualizarVisor();
+    }
+
+    function actualizarVisor() {
+      if (operacao) {
+        visor.textContent = numeroAnterior + ' ' + operacao + ' ' + numeroAtual;
+      } else {
+        visor.textContent = numeroAtual || '0';
+      }
+    }
+  </script>
+
+</body>
+</html>
